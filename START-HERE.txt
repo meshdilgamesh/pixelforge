@@ -12,8 +12,10 @@ This package contains EVERYTHING: the app, all 9 AI models
    First run downloads Python + PyTorch (~3 GB, one time, needs internet).
 
  WINDOWS
-   1. double-click  install.bat    (recommended - Start Menu icon)
-      or:           start.bat      (portable)
+   1. double-click  setup.bat      (recommended - setup window with
+                                    install-location picker)
+      or:           install.bat    (console installer)
+      or:           start.bat      (portable, no install)
    2. your browser opens - same as above.
 
  Requires: NVIDIA GPU for full speed (any GTX 10-series or newer).
