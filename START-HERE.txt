@@ -1,0 +1,22 @@
+PixelForge — free & open source AI image upscaler
+=========================================================
+
+This package contains EVERYTHING: the app, all 9 AI models
+(including the exclusive "4x-PixelForge-Signature"), installer and launcher.
+
+ LINUX / macOS
+   1. open a terminal in this folder
+   2. run:  bash install.sh        (recommended - adds app menu / command)
+      or:   bash start.sh          (portable, no install)
+   3. browser opens at http://127.0.0.1:8477 — drop images in, Forge it.
+   First run downloads Python + PyTorch (~3 GB, one time, needs internet).
+
+ WINDOWS
+   1. double-click  install.bat    (recommended - Start Menu icon)
+      or:           start.bat      (portable)
+   2. your browser opens - same as above.
+
+ Requires: NVIDIA GPU for full speed (any GTX 10-series or newer).
+   Macs (M1-M4) and CPU-only machines work too, just slower.
+ Everything runs on your computer - nothing is uploaded anywhere.
+ Update later with:  pixelforge update   (once a release URL is published)

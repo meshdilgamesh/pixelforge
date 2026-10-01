@@ -1,0 +1,935 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PixelForge — forge blurry pixels into crystal 4K</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect x='4' y='4' width='16' height='16' rx='3' fill='%238b5cf6'/%3E%3Crect x='28' y='28' width='16' height='16' rx='3' fill='%2322d3ee'/%3E%3Crect x='22' y='22' width='4' height='4' fill='%23f472b6'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#090c16; --text:#eef2ff; --dim:#98a4c4; --line:rgba(148,163,255,.16);
+    --glass:rgba(19,23,42,.66); --glass2:rgba(27,32,58,.55);
+    --violet:#8b5cf6; --indigo:#6366f1; --cyan:#22d3ee; --pink:#f472b6; --amber:#fbbf24;
+    --ok:#34d399; --err:#fb7185; --r:22px;
+  }
+  *{box-sizing:border-box} html,body{margin:0;min-height:100%}
+  body{
+    background:radial-gradient(1100px 520px at 70% -10%, #161d3a 0%, var(--bg) 60%) fixed;
+    color:var(--text);
+    font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,sans-serif;
+    overflow-x:hidden;
+  }
+  ::selection{background:rgba(139,92,246,.45)}
+  ::-webkit-scrollbar{width:11px;height:11px}
+  ::-webkit-scrollbar-thumb{background:#232c4a;border-radius:99px;border:3px solid var(--bg)}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  /* ---------- living background ---------- */
+  .blob{position:fixed;border-radius:50%;filter:blur(95px);opacity:.45;z-index:-3;
+        animation:drift 26s ease-in-out infinite alternate;pointer-events:none}
+  .b1{width:580px;height:580px;background:#5b2bd9;top:-170px;left:-120px}
+  .b2{width:500px;height:500px;background:#0e7490;top:14%;right:-150px;animation-delay:-9s}
+  .b3{width:460px;height:460px;background:#be185d;bottom:-170px;left:26%;animation-delay:-16s;opacity:.32}
+  @keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(70px,50px) scale(1.18)}}
+  .gridlines{position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background:linear-gradient(rgba(148,163,255,.05) 1px,transparent 1px),
+               linear-gradient(90deg,rgba(148,163,255,.05) 1px,transparent 1px);
+    background-size:38px 38px;
+    -webkit-mask-image:radial-gradient(ellipse at 50% -10%,#000 25%,transparent 72%);
+            mask-image:radial-gradient(ellipse at 50% -10%,#000 25%,transparent 72%);}
+  .vignette{position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 40%,transparent 55%,rgba(3,4,10,.55) 100%)}
+  .noise{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  #embers{position:fixed;inset:0;z-index:-1;pointer-events:none}
+  .topline{position:fixed;top:0;left:0;right:0;height:2px;z-index:5;
+    background:linear-gradient(90deg,var(--violet),var(--cyan),var(--pink),var(--violet));
+    background-size:280% 100%;animation:slide 9s linear infinite}
+  @media (prefers-reduced-motion: reduce){
+    .blob,#embers,.run,.topline,.logo .flow{animation:none !important}
+  }
+
+  .wrap{max-width:1220px;margin:0 auto;padding:30px 24px 70px}
+
+  /* ---------- header ---------- */
+  header{display:flex;align-items:center;gap:16px;padding:4px 4px 24px}
+  .logo{display:flex;align-items:center;gap:14px}
+  .logo svg{width:48px;height:48px;filter:drop-shadow(0 0 14px rgba(139,92,246,.6))}
+  .logo .core{animation:corePulse 2.4s ease-in-out infinite}
+  @keyframes corePulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .logo .flow{stroke-dasharray:5 5;animation:flow 1.1s linear infinite}
+  @keyframes flow{to{stroke-dashoffset:-10}}
+  .word h1{font-size:30px;margin:0;font-weight:800;letter-spacing:-.6px;line-height:1.05}
+  .word h1 .px{background:linear-gradient(92deg,var(--violet) 10%,var(--cyan) 90%);
+               -webkit-background-clip:text;background-clip:text;color:transparent}
+  .word .tag{font-size:13px;color:var(--dim);letter-spacing:.3px;margin-top:3px}
+  .hbtns{margin-left:auto;display:flex;gap:10px;align-items:center}
+  .gpu{display:flex;align-items:center;gap:9px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+       font-size:12px;color:var(--dim);border:1px solid var(--line);padding:9px 14px;border-radius:14px;
+       background:var(--glass);backdrop-filter:blur(14px);box-shadow:0 8px 30px rgba(0,0,0,.35)}
+  .gpu .led{width:8px;height:8px;border-radius:2px;background:var(--ok);
+            box-shadow:0 0 8px var(--ok);animation:corePulse 1.6s ease-in-out infinite}
+  .gpu b{color:var(--text);font-weight:600}
+  .tourbtn{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--glass);
+       color:var(--text);border-radius:14px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s}
+  .tourbtn:hover{border-color:var(--pink);box-shadow:0 6px 22px -8px var(--pink)}
+
+  /* ---------- glass cards with gradient rim ---------- */
+  .grid{display:grid;grid-template-columns:410px 1fr;gap:20px;align-items:start}
+  @media (max-width:990px){.grid{grid-template-columns:1fr}}
+  .card{position:relative;border-radius:var(--r);padding:22px;
+        background:linear-gradient(180deg,var(--glass),rgba(12,15,28,.72));
+        backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+        border:1px solid transparent;
+        background-clip:padding-box;
+        box-shadow:0 24px 70px rgba(0,0,0,.5)}
+  .card::before{content:"";position:absolute;inset:-1px;border-radius:calc(var(--r) + 1px);z-index:-1;
+        background:linear-gradient(140deg,rgba(139,92,246,.55),rgba(34,211,238,.28) 40%,rgba(244,114,182,.35) 75%,rgba(139,92,246,.1));
+        -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+        -webkit-mask-composite:xor;mask-composite:exclude;padding:1px}
+  .card h2{display:flex;align-items:center;gap:9px;font-size:11.5px;text-transform:uppercase;
+           letter-spacing:2.2px;color:var(--dim);margin:0 0 14px;font-weight:700}
+  .card h2::before{content:"";width:8px;height:8px;background:linear-gradient(135deg,var(--violet),var(--cyan));
+                   border-radius:2px;box-shadow:0 0 10px rgba(139,92,246,.8)}
+  h2.mt{margin-top:22px}
+
+  /* ---------- the instruction trail ---------- */
+  .trail{display:flex;align-items:center;gap:6px;margin-bottom:20px;
+         background:rgba(9,12,24,.55);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+  .tstep{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--dim);
+         transition:.25s;white-space:nowrap}
+  .tstep .n{width:21px;height:21px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+            font-size:11px;background:rgba(148,163,255,.12);border:1px solid var(--line);transition:.25s}
+  .tstep.active{color:#fff}
+  .tstep.active .n{background:linear-gradient(135deg,var(--violet),var(--cyan));border-color:transparent;
+                   box-shadow:0 0 14px -2px var(--violet);animation:corePulse 1.6s ease-in-out infinite}
+  .tstep.done{color:var(--ok)}
+  .tstep.done .n{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.4);color:var(--ok)}
+  .tstep.done .n::after{content:"✓"}
+  .tstep.done .n .num{display:none}
+  .tline{flex:1;height:2px;min-width:12px;border-radius:2px;background:rgba(148,163,255,.15);transition:.4s}
+  .tline.lit{background:linear-gradient(90deg,var(--violet),var(--cyan));box-shadow:0 0 8px -2px var(--violet)}
+
+  /* section spotlight while it's the active trail step */
+  .sec{border-radius:16px;padding:10px;margin:-10px;transition:box-shadow .4s, background .4s;border:1px solid transparent}
+  #controls[data-step="1"] #secImages,
+  #controls[data-step="2"] #secSize,
+  #controls[data-step="3"] .runwrap{
+    border-color:rgba(139,92,246,.5);
+    background:radial-gradient(420px 120px at 20% 0%,rgba(139,92,246,.13),transparent 70%);
+    box-shadow:0 0 0 1px rgba(139,92,246,.35), 0 10px 40px -12px rgba(139,92,246,.45)}
+  .runwrap{border-radius:16px;padding:10px;margin-top:6px;border:1px solid transparent}
+  .runwrap .run{margin-top:0}
+
+  /* ---------- drop zone ---------- */
+  .drop{position:relative;border:2px dashed rgba(148,163,255,.35);border-radius:16px;padding:28px 16px;
+        text-align:center;cursor:pointer;color:var(--dim);transition:.2s;overflow:hidden}
+  .drop::before{content:"";position:absolute;inset:0;opacity:0;transition:.25s;
+        background:radial-gradient(340px 130px at 50% 0%,rgba(139,92,246,.25),transparent 70%)}
+  .drop:hover,.drop.over{border-color:var(--violet);color:var(--text);transform:translateY(-1px)}
+  .drop:hover::before,.drop.over::before{opacity:1}
+  #controls[data-step="1"] .drop{border-color:var(--violet)}
+  #controls[data-step="1"] .drop .big::after{content:"  ← start here";
+        font-size:12px;color:var(--pink);font-weight:800;animation:corePulse 1.4s ease-in-out infinite}
+  .drop .big{font-size:16px;font-weight:700;color:var(--text);margin:10px 0 3px}
+  .drop svg{width:36px;height:36px;animation:hover 2.6s ease-in-out infinite}
+  @keyframes hover{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+  .drop .hint{font-size:12px;color:var(--dim);margin-top:4px}
+  .thumbs{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
+  .thumbs .th{position:relative;width:56px;height:56px;border-radius:10px;overflow:hidden;
+              border:1px solid var(--line);cursor:pointer;transition:.15s}
+  .thumbs .th:hover{border-color:var(--pink);transform:scale(1.06)}
+  .thumbs .th img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumbs .th::after{content:"✕";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        background:rgba(10,12,24,.72);color:#fff;font-size:15px;opacity:0;transition:.15s}
+  .thumbs .th:hover::after{opacity:1}
+
+  /* ---------- model cards ---------- */
+  .models{display:flex;flex-direction:column;gap:9px;max-height:288px;overflow-y:auto;padding-right:4px}
+  .model{--mc:#94a3b8;display:flex;gap:11px;align-items:flex-start;border:1px solid var(--line);
+         border-radius:14px;padding:11px 13px;cursor:pointer;background:var(--glass2);transition:.16s;position:relative}
+  .model:hover{border-color:color-mix(in srgb,var(--mc) 55%,transparent);transform:translateY(-1px)}
+  .model.sel{border-color:var(--mc);box-shadow:0 0 0 1px var(--mc), 0 10px 34px -10px var(--mc)}
+  .model .dot{width:9px;height:9px;border-radius:2px;margin-top:6px;flex:none;background:#475569;transition:.2s}
+  .model .dot.have{background:var(--mc);box-shadow:0 0 9px var(--mc)}
+  .model .nm{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .model .nm small{color:var(--dim);font-weight:500}
+  .badge{font-size:9.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+         padding:2.5px 7px;border-radius:99px;border:1px solid}
+  .badge.fast{color:#6ee7b7;border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.08)}
+  .badge.mid{color:#fcd34d;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+  .badge.slow{color:#f9a8d4;border-color:rgba(244,114,182,.4);background:rgba(244,114,182,.08)}
+  .model .ds{font-size:12px;color:var(--dim);margin-top:2px}
+  .model .dl{margin-left:auto;flex:none;font-size:12px;font-weight:600;border:1px solid var(--line);border-radius:9px;
+             background:rgba(10,13,25,.7);color:var(--text);padding:5px 11px;cursor:pointer;transition:.15s}
+  .model .dl:hover{border-color:var(--mc);color:var(--mc)}
+  .model .dl[disabled]{opacity:.55;cursor:default}
+
+  /* ---------- segmented + chips ---------- */
+  .seg{display:flex;background:rgba(10,13,25,.65);border:1px solid var(--line);border-radius:13px;padding:4px;margin-bottom:12px}
+  .seg button{flex:1;border:0;background:transparent;color:var(--dim);padding:8px 0;border-radius:10px;
+              cursor:pointer;font-size:13.5px;font-weight:700;transition:.18s}
+  .seg button.on{color:#fff;background:linear-gradient(92deg,var(--violet),var(--indigo));
+                 box-shadow:0 4px 18px -4px var(--violet)}
+  .chips{display:flex;flex-wrap:wrap;gap:9px}
+  .chip{border:1px solid var(--line);background:var(--glass2);color:var(--text);border-radius:11px;
+        padding:9px 16px;cursor:pointer;font-size:13.5px;font-weight:700;transition:.15s}
+  .chip:hover{transform:translateY(-1px);border-color:var(--cyan)}
+  .chip.on{border-color:transparent;color:#fff;background:linear-gradient(92deg,var(--violet),var(--cyan));
+           box-shadow:0 6px 22px -6px var(--cyan)}
+  .customwh{display:flex;gap:9px;margin-top:12px;align-items:center;color:var(--dim);font-size:13px}
+  .customwh input,select,input[type=number]{background:rgba(10,13,25,.7);border:1px solid var(--line);color:var(--text);
+        border-radius:10px;padding:8px 10px;font-size:13px;outline:none;transition:.15s}
+  .customwh input:focus,select:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(34,211,238,.18)}
+  .customwh input{width:84px}
+
+  details{margin-top:16px;color:var(--dim);font-size:13px}
+  details summary{cursor:pointer;color:var(--text);font-weight:700;font-size:13px;letter-spacing:.3px}
+  .adv{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:13px}
+  .adv label{display:flex;flex-direction:column;gap:5px;font-size:11px;color:var(--dim);
+             text-transform:uppercase;letter-spacing:1px}
+
+  /* ---------- the forge button ---------- */
+  .run{position:relative;width:100%;border:0;border-radius:15px;padding:15px;font-size:16px;
+       font-weight:800;letter-spacing:.4px;color:#fff;cursor:pointer;overflow:hidden;
+       background:linear-gradient(92deg,var(--violet),var(--indigo),var(--cyan),var(--pink),var(--violet));
+       background-size:280% 100%;animation:slide 7s linear infinite;
+       box-shadow:0 10px 34px -8px var(--violet);transition:.2s}
+  @keyframes slide{to{background-position:280% 0}}
+  .run::after{content:"";position:absolute;top:0;bottom:0;width:46%;left:-60%;
+              background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);
+              transform:skewX(-18deg);transition:left .5s}
+  .run:hover:not([disabled])::after{left:120%}
+  .run[disabled]{animation:none;filter:saturate(.25) brightness(.75);cursor:default;box-shadow:none}
+  #controls[data-step="3"] .run:not([disabled]){animation:slide 7s linear infinite, readyPulse 1.6s ease-in-out infinite}
+  @keyframes readyPulse{0%,100%{box-shadow:0 10px 34px -8px var(--violet)}50%{box-shadow:0 10px 44px 0 var(--violet)}}
+  .run.stop{background:linear-gradient(92deg,#e11d48,#f97316);animation:none;box-shadow:0 10px 30px -8px #e11d48}
+  .err{color:var(--err);font-size:13px;margin-top:10px;white-space:pre-wrap}
+
+  /* ---------- results side ---------- */
+  .progress{height:10px;border-radius:99px;background:rgba(8,10,20,.8);overflow:hidden;margin:14px 0 8px;
+            display:none;border:1px solid var(--line)}
+  .progress i{display:block;height:100%;width:0%;border-radius:99px;position:relative;
+              background:linear-gradient(90deg,var(--violet),var(--cyan));transition:width .3s;
+              box-shadow:0 0 14px rgba(34,211,238,.6)}
+  .progress i::after{content:"";position:absolute;inset:0;
+              background:repeating-linear-gradient(45deg,rgba(255,255,255,.22) 0 9px,transparent 9px 18px);
+              animation:march .7s linear infinite}
+  @keyframes march{to{background-position:25px 0}}
+  .statusline{font-size:13.5px;color:var(--dim);min-height:21px;margin-bottom:4px}
+  .statusline .engine{color:var(--cyan);font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .flavor{font-size:12.5px;color:var(--pink);min-height:18px;font-style:italic;opacity:.9}
+
+  /* ---------- compare (demo + results) ---------- */
+  .cmp{position:relative;user-select:none;touch-action:none;cursor:ew-resize;background:#05070f;overflow:hidden}
+  .cmp img,.cmp canvas{display:block;width:100%;height:auto;pointer-events:none}
+  .cmp .after{position:absolute;inset:0}
+  .cmp .bar{position:absolute;top:0;bottom:0;width:2px;background:#fff;
+            box-shadow:0 0 12px rgba(255,255,255,.9),0 0 30px rgba(139,92,246,.8)}
+  .cmp .bar::after{content:"◂ ▸";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+        background:#fff;color:#0a0d18;font-size:11px;font-weight:800;padding:5px 9px;border-radius:99px;
+        white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.6)}
+  .cmp .tag{position:absolute;top:12px;font-size:10px;font-weight:800;letter-spacing:1.6px;
+        background:rgba(8,10,20,.62);backdrop-filter:blur(6px);padding:5px 11px;border-radius:99px;color:#fff;
+        border:1px solid rgba(255,255,255,.18)}
+  .tag.l{left:12px}.tag.r{right:12px}
+  .tryme{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:11.5px;font-weight:700;
+         color:#fff;background:linear-gradient(92deg,var(--violet),var(--cyan));padding:6px 14px;border-radius:99px;
+         animation:hover 2s ease-in-out infinite;box-shadow:0 6px 20px -4px var(--violet)}
+  .result{position:relative;background:var(--glass2);border:1px solid var(--line);border-radius:16px;overflow:hidden;
+          transition:.25s;animation:pop .35s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+  .result:hover{border-color:rgba(139,92,246,.45);box-shadow:0 14px 44px -14px rgba(139,92,246,.5)}
+  .result .meta{display:flex;align-items:center;gap:10px;padding:11px 14px;font-size:13px;color:var(--dim);flex-wrap:wrap}
+  .result .meta b{color:var(--text);font-weight:600}
+  .result .meta .sz{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--cyan)}
+  .result .meta a{margin-left:auto;color:#0a0d18;text-decoration:none;font-weight:800;font-size:12px;
+                  background:linear-gradient(92deg,var(--cyan),#67e8f9);padding:6px 13px;border-radius:9px;transition:.15s}
+  .result .meta a:hover{box-shadow:0 6px 20px -4px var(--cyan);transform:translateY(-1px)}
+  .caption{font-size:12.5px;color:var(--dim);padding:10px 14px;border-top:1px solid var(--line)}
+  .caption b{color:var(--text)}
+  .spark{position:absolute;font-size:14px;pointer-events:none;animation:rise 1.4s ease-out forwards;z-index:3}
+  @keyframes rise{from{opacity:1;transform:translateY(0) scale(.6)}to{opacity:0;transform:translateY(-46px) scale(1.25)}}
+  footer{margin-top:40px;color:#5f6b8a;font-size:12.5px;text-align:center}
+  footer b{background:linear-gradient(92deg,var(--violet),var(--cyan));
+           -webkit-background-clip:text;background-clip:text;color:transparent}
+  #updateBanner{margin:0 0 14px;padding:11px 16px;border-radius:12px;font-size:13.5px;
+        border:1px solid rgba(251,191,36,.45);background:rgba(251,191,36,.09);color:#fcd34d}
+  #updateBanner b{color:#fff}
+  #updateBanner code{font-family:ui-monospace,Menlo,monospace;background:rgba(0,0,0,.4);
+        padding:2px 8px;border-radius:6px;color:var(--cyan)}
+
+  /* ---------- full-window drop overlay ---------- */
+  #dropOverlay{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+        background:rgba(6,8,18,.78);backdrop-filter:blur(8px)}
+  #dropOverlay.show{display:flex}
+  #dropOverlay .inner{border:3px dashed var(--cyan);border-radius:26px;padding:60px 90px;text-align:center;
+        background:radial-gradient(500px 220px at 50% 30%,rgba(139,92,246,.25),transparent 70%)}
+  #dropOverlay .big{font-size:26px;font-weight:800;margin-top:14px}
+  #dropOverlay .sm{color:var(--dim);margin-top:6px}
+
+  /* ---------- welcome tour ---------- */
+  #tour{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+        background:rgba(5,7,15,.82);backdrop-filter:blur(10px)}
+  #tour.show{display:flex}
+  .tcard{position:relative;width:min(620px,92vw);border-radius:26px;padding:38px 40px 30px;
+        background:linear-gradient(180deg,rgba(24,28,52,.92),rgba(13,16,30,.94));
+        border:1px solid rgba(148,163,255,.22);box-shadow:0 40px 120px rgba(0,0,0,.7);
+        animation:pop .3s ease}
+  .tcard .skip{position:absolute;top:16px;right:18px;color:var(--dim);background:none;border:0;
+        font-size:13px;cursor:pointer;font-weight:700}
+  .tcard .skip:hover{color:var(--text)}
+  .tslide{display:none;animation:pop .3s ease}
+  .tslide.on{display:block}
+  .tslide .kick{font-size:11px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;
+        background:linear-gradient(92deg,var(--cyan),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .tslide h3{font-size:26px;margin:8px 0 10px;font-weight:800;letter-spacing:-.4px}
+  .tslide p{color:var(--dim);font-size:14.5px;margin:0 0 18px;line-height:1.65}
+  .tslide p b{color:var(--text)}
+  .tart{height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+  .tdots{display:flex;gap:8px;margin:22px 0 16px}
+  .tdots i{width:8px;height:8px;border-radius:3px;background:rgba(148,163,255,.22);transition:.25s}
+  .tdots i.on{width:26px;background:linear-gradient(92deg,var(--violet),var(--cyan))}
+  .tnav{display:flex;gap:10px}
+  .tnav .back{flex:none;background:none;border:1px solid var(--line);color:var(--dim);border-radius:11px;
+        padding:11px 18px;font-weight:700;cursor:pointer;font-size:13.5px}
+  .tnav .back:hover{color:var(--text)}
+  .tnav .next{flex:1;border:0;border-radius:11px;padding:12px;font-size:15px;font-weight:800;color:#fff;
+        cursor:pointer;background:linear-gradient(92deg,var(--violet),var(--cyan));
+        box-shadow:0 8px 26px -8px var(--violet)}
+  .mini{display:flex;gap:8px;justify-content:center;margin:6px 0 2px}
+  .mini .mc{--mc:#22d3ee;display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;
+        border:1px solid color-mix(in srgb,var(--mc) 45%,transparent);color:var(--text);
+        background:rgba(12,15,30,.7);padding:7px 11px;border-radius:10px}
+  .mini .mc i{width:8px;height:8px;border-radius:2px;background:var(--mc);box-shadow:0 0 8px var(--mc)}
+</style>
+</head>
+<body>
+<div class="topline"></div>
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+<div class="gridlines"></div><div class="vignette"></div><div class="noise"></div>
+<canvas id="embers"></canvas>
+
+  <div class="wrap">
+  <div id="updateBanner" style="display:none">
+    ✦ PixelForge <b id="ubVer"></b> is available — close the app and run <code>pixelforge update</code>
+  </div>
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 48 48" fill="none">
+        <rect class="core" x="4" y="4" width="15" height="15" rx="3" fill="#8b5cf6"/>
+        <rect class="core" x="29" y="29" width="15" height="15" rx="3" fill="#22d3ee" style="animation-delay:-1.2s"/>
+        <path class="flow" d="M20 12h7a9 9 0 0 1 9 9v7" stroke="#eef2ff" stroke-width="2.6"/>
+        <path d="M33 25l3.5 3.5L40 25" stroke="#22d3ee" stroke-width="2.6" stroke-linecap="round"/>
+        <rect x="22" y="22" width="4" height="4" fill="#f472b6"/>
+      </svg>
+      <div class="word">
+        <h1><span class="px">Pixel</span>Forge</h1>
+        <div class="tag">forge blurry pixels into crystal 4K — right on your own GPU</div>
+      </div>
+    </div>
+    <div class="hbtns">
+      <button class="tourbtn" id="tourBtn">✦&nbsp;Show me how</button>
+      <div class="gpu" id="gpu"><span class="led"></span>detecting hardware…</div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- ---------------- controls ---------------- -->
+    <div class="card" id="controls" data-step="1">
+      <h2>The trail</h2>
+      <div class="trail">
+        <div class="tstep" id="ts1"><span class="n"><span class="num">1</span></span>Add image</div>
+        <div class="tline" id="tl1"></div>
+        <div class="tstep" id="ts2"><span class="n"><span class="num">2</span></span>Pick size</div>
+        <div class="tline" id="tl2"></div>
+        <div class="tstep" id="ts3"><span class="n"><span class="num">3</span></span>Forge ✦</div>
+      </div>
+
+      <div class="sec" id="secImages">
+        <h2>1 · Feed the forge</h2>
+        <div class="drop" id="drop">
+          <svg viewBox="0 0 34 34" fill="none">
+            <rect x="3" y="7" width="20" height="20" rx="3" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="4 3"/>
+            <circle cx="10" cy="14" r="2.4" fill="#fbbf24"/>
+            <path d="M8 24l6-7 5 5 3-3 4 5" stroke="#22d3ee" stroke-width="2" stroke-linecap="round"/>
+            <path d="M27 8v8m0-8l-3 3m3-3l3 3" stroke="#f472b6" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <div class="big">Drop images here</div>
+          or click to choose · batch works too
+          <div class="hint">PNG · JPEG · WebP · BMP · TIFF — nothing leaves your PC</div>
+        </div>
+        <div class="thumbs" id="thumbs"></div>
+        <input type="file" id="file" multiple accept=".png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,.avif" hidden>
+      </div>
+
+      <h2 class="mt">2 · Pick your edge</h2>
+      <div class="models" id="models"></div>
+
+      <div class="sec" id="secSize">
+        <h2 class="mt">3 · How big?</h2>
+        <div class="seg">
+          <button id="segScale" class="on">Multiply</button>
+          <button id="segTarget">Exact resolution</button>
+        </div>
+        <div class="chips" id="scaleChips">
+          <button class="chip" data-v="2">2×</button>
+          <button class="chip" data-v="3">3×</button>
+          <button class="chip on" data-v="4">4×</button>
+          <button class="chip" data-v="6">6×</button>
+          <button class="chip" data-v="8">8×</button>
+        </div>
+        <div class="chips" id="targetChips" style="display:none">
+          <button class="chip" data-v="fhd">1080p</button>
+          <button class="chip" data-v="1440p">1440p</button>
+          <button class="chip on" data-v="4k">4K UHD</button>
+          <button class="chip" data-v="8k">8K</button>
+        </div>
+        <div class="customwh" id="customRow" style="display:none">
+          custom
+          <input id="cw" type="number" placeholder="3840"> ×
+          <input id="ch" type="number" placeholder="2160">
+          <button class="chip" id="useCustom">use</button>
+        </div>
+      </div>
+
+      <details>
+        <summary>⚙ Advanced</summary>
+        <div class="adv">
+          <label>Tile size
+            <select id="tile">
+              <option value="0" selected>Auto (from VRAM)</option>
+              <option value="256">256 — lowest memory</option>
+              <option value="384">384 — good for 6 GB</option>
+              <option value="512">512 — 8 GB+</option>
+              <option value="768">768 — 12 GB+</option>
+            </select>
+          </label>
+          <label>Precision
+            <select id="fp16">
+              <option value="true" selected>fp16 (fast)</option>
+              <option value="false">fp32 (safe)</option>
+            </select>
+          </label>
+          <label>Device
+            <select id="device">
+              <option value="auto" selected>Auto</option>
+              <option value="cuda">GPU (CUDA)</option>
+              <option value="cpu">CPU (very slow)</option>
+            </select>
+          </label>
+          <label>Format
+            <select id="format">
+              <option value="auto" selected>Auto</option>
+              <option value="png">PNG (lossless)</option>
+              <option value="jpeg">JPEG</option>
+              <option value="webp">WebP</option>
+            </select>
+          </label>
+        </div>
+      </details>
+
+      <div class="runwrap">
+        <button class="run" id="run" disabled>⚡ Forge it</button>
+        <div class="err" id="err"></div>
+      </div>
+    </div>
+
+    <!-- ---------------- results ---------------- -->
+    <div class="card" id="revealCard">
+      <h2>The reveal — drag the divider</h2>
+      <div class="progress" id="prog"><i></i></div>
+      <div class="statusline" id="status"></div>
+      <div class="flavor" id="flavor"></div>
+
+      <div class="result" id="demo">
+        <div class="cmp" id="demoCmp">
+          <canvas id="demoBefore" width="640" height="360"></canvas>
+          <div class="after" style="clip-path:inset(0 50% 0 0)"><canvas id="demoAfter" width="640" height="360"></canvas></div>
+          <div class="bar" style="left:50%"></div>
+          <span class="tag l">PIXELATED</span><span class="tag r">FORGED</span>
+          <span class="tryme">drag me ↔</span>
+        </div>
+        <div class="caption"><b>Live demo</b> — this is what PixelForge does to soft,
+          blocky sources. Follow the trail on the left: drop a real image and your own
+          before/after appears here.</div>
+      </div>
+
+      <div class="results" id="results"></div>
+    </div>
+  </div>
+
+  <footer>forged locally · <b>free &amp; open source</b> · models by the Real-ESRGAN, Phips &amp; OpenModelDB communities</footer>
+</div>
+
+<!-- full-window drop overlay -->
+<div id="dropOverlay"><div class="inner">
+  <svg viewBox="0 0 34 34" fill="none" style="width:52px;height:52px">
+    <rect x="3" y="7" width="20" height="20" rx="3" stroke="#22d3ee" stroke-width="2" stroke-dasharray="4 3"/>
+    <path d="M27 8v12m0-12l-4 4m4-4l4 4" stroke="#f472b6" stroke-width="2.4" stroke-linecap="round"/>
+  </svg>
+  <div class="big">Drop to forge ✦</div>
+  <div class="sm">release the mouse button</div>
+</div></div>
+
+<!-- welcome tour -->
+<div id="tour">
+  <div class="tcard">
+    <button class="skip" id="tourSkip">skip tour ✕</button>
+
+    <div class="tslide" data-i="0">
+      <div class="tart">
+        <svg viewBox="0 0 48 48" fill="none" style="width:88px;height:88px;filter:drop-shadow(0 0 18px rgba(139,92,246,.6))">
+          <rect x="4" y="4" width="16" height="16" rx="3" fill="#8b5cf6"/>
+          <rect x="28" y="28" width="16" height="16" rx="3" fill="#22d3ee"/>
+          <path class="flow" d="M20 12h7a9 9 0 0 1 9 9v7" stroke="#eef2ff" stroke-width="2.6"/>
+          <path d="M33 25l3.5 3.5L40 25" stroke="#22d3ee" stroke-width="2.6" stroke-linecap="round"/>
+          <rect x="22" y="22" width="4" height="4" fill="#f472b6"/>
+        </svg>
+      </div>
+      <span class="kick">Welcome to PixelForge</span>
+      <h3>Blurry in. Crystal out.</h3>
+      <p>Take a <b>low-quality image, a compressed JPEG, or an AI render</b> and forge it into a
+      sharp, detailed, high-resolution version — up to <b>8K</b>. It runs <b>100% on this computer</b>:
+      nothing is ever uploaded anywhere. New here? This 30-second tour is all you need.</p>
+    </div>
+
+    <div class="tslide" data-i="1">
+      <div class="tart">
+        <svg viewBox="0 0 120 70" fill="none" style="width:150px">
+          <rect x="6" y="10" width="44" height="44" rx="6" stroke="#8b5cf6" stroke-width="2.4" stroke-dasharray="6 4"/>
+          <circle cx="20" cy="24" r="4" fill="#fbbf24"/>
+          <path d="M14 46l12-14 10 10 6-6 8 10" stroke="#22d3ee" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M78 20v26m0-26l-8 8m8-8l8 8" stroke="#f472b6" stroke-width="3" stroke-linecap="round"/>
+          <rect x="70" y="52" width="16" height="5" rx="2.5" fill="#f472b6" opacity=".6"/>
+        </svg>
+      </div>
+      <span class="kick">Step 1</span>
+      <h3>Feed it an image</h3>
+      <p><b>Drag &amp; drop anywhere on this window</b>, or click the drop zone to pick files.
+      You can throw a whole folder of images at it — PixelForge processes them one by one.
+      The fuzzier the source, the more dramatic the reveal.</p>
+    </div>
+
+    <div class="tslide" data-i="2">
+      <div class="tart"><div class="mini">
+        <span class="mc" style="--mc:#38bdf8"><i></i>WebPhoto · great default</span>
+        <span class="mc" style="--mc:#f0abfc"><i></i>DAT-2 · max detail</span>
+        <span class="mc" style="--mc:#f472b6"><i></i>Anime · for art</span>
+      </div></div>
+      <span class="kick">Step 2</span>
+      <h3>Choose your edge</h3>
+      <p>Each model is a different "forging style". You can't go wrong with the <b>default
+      (WebPhoto)</b> — sharpest detail and fastest. Feeding a <b>clean AI image</b> and want
+      everything it can give? Pick <b>DAT-2</b>. <b>Anime or game art?</b> There's a model for
+      that too. Every card says what it's best at.</p>
+    </div>
+
+    <div class="tslide" data-i="3">
+      <div class="tart">
+        <svg viewBox="0 0 150 70" fill="none" style="width:170px">
+          <rect x="8" y="18" width="40" height="26" rx="5" fill="#1c2340" stroke="#475069"/>
+          <path d="M14 38l9-11 7 8 5-5 7 8" stroke="#22d3ee" stroke-width="2.2"/>
+          <path d="M58 31h20m0 0l-6-6m6 6l-6 6" stroke="#8b5cf6" stroke-width="2.6" stroke-linecap="round"/>
+          <rect x="88" y="10" width="54" height="42" rx="5" fill="#1c2340" stroke="#475069"/>
+          <path d="M94 44l13-16 10 12 7-7 10 11" stroke="#22d3ee" stroke-width="2.2"/>
+          <rect x="94" y="16" width="9" height="9" rx="2" fill="#fbbf24" opacity=".8"/>
+        </svg>
+      </div>
+      <span class="kick">Step 3</span>
+      <h3>Pick a size · Forge ✦</h3>
+      <p><b>4×</b> is a great start, or switch to <b>Exact resolution</b> for
+      <b>1080p / 1440p / 4K / 8K</b> / any custom size — the aspect ratio is always preserved.
+      Hit <b>⚡ Forge it</b>, then <b>drag the divider</b> on the reveal to compare, and press
+      <b>Save</b>. That's the whole craft.</p>
+    </div>
+
+    <div class="tdots" id="tdots"><i class="on"></i><i></i><i></i><i></i></div>
+    <div class="tnav">
+      <button class="back" id="tourBack" style="visibility:hidden">← Back</button>
+      <button class="next" id="tourNext">Next →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+let files = [];
+let beforeURLs = new Map();
+let models = [];
+let selModel = null;
+let mode = "scale";
+let scaleVal = 4;
+let targetVal = "4k";
+let customTarget = null;
+let pollTimer = null;
+let flavorTimer = null;
+let sizeTouched = false;
+let hasResult = false;
+
+const ACCENTS = { ultrasharp:"#22d3ee", realesrgan:"#a78bfa", general:"#fbbf24", anime:"#f472b6",
+                  dat2:"#f0abfc", nomos8k:"#34d399", webphoto:"#38bdf8", ultrasharpv2:"#fb923c" };
+const SPEED = { webphoto:"fast", general:"fast", realesrgan:"fast", anime:"fast",
+                ultrasharp:"mid", ultrasharpv2:"mid", dat2:"slow", nomos8k:"slow" };
+const BADGE = { fast:["fast","⚡ fast"], mid:["mid","◐ balanced"], slow:["slow","✦ max detail"] };
+const FLAVORS = [
+  "warming up the forge…", "sharpening every little pixel…", "teaching details to behave…",
+  "polishing photons…", "convincing blur to become detail…", "counting subpixels (a lot)…",
+  "giving edges a haircut…", "whispering encouragement to the GPU…", "ironing out the mush…",
+  "distilling sharpness…"
+];
+
+/* ---------- rising pixel sparks ---------- */
+(function embers(){
+  const cv = $("embers"), ctx = cv.getContext("2d");
+  let W, H;
+  const resize = () => { W = cv.width = innerWidth; H = cv.height = innerHeight; };
+  resize(); addEventListener("resize", resize);
+  const HUES = [38, 20, 320, 190];
+  const spawn = init => ({
+    x: Math.random()*W, y: init ? Math.random()*H : H+8,
+    s: 1.5+Math.random()*2.6, v: .25+Math.random()*.85,
+    ph: Math.random()*6.28, hue: HUES[Math.random()*HUES.length|0],
+    a: .2+Math.random()*.45
+  });
+  const P = Array.from({length: 34}, () => spawn(true));
+  (function tick(){
+    ctx.clearRect(0,0,W,H);
+    for(const p of P){
+      p.y -= p.v; p.ph += .012; p.x += Math.sin(p.ph)*.35;
+      if(p.y < -8) Object.assign(p, spawn(false));
+      ctx.globalAlpha = p.a * Math.min(1, p.y/H);
+      ctx.fillStyle = `hsl(${p.hue} 92% 62%)`;
+      ctx.fillRect(p.x, p.y, p.s, p.s);
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(tick);
+  })();
+})();
+
+/* ---------- demo scene: pixelated vs forged ---------- */
+(function demo(){
+  function scene(g, w, h){
+    const sky = g.createLinearGradient(0,0,0,h);
+    sky.addColorStop(0,"#1e1b4b"); sky.addColorStop(.55,"#7c2d6e"); sky.addColorStop(.8,"#f97316");
+    g.fillStyle = sky; g.fillRect(0,0,w,h);
+    for(let i=0;i<40;i++){
+      g.fillStyle = `rgba(255,255,255,${.25+Math.random()*.6})`;
+      g.fillRect(Math.random()*w, Math.random()*h*.45, 1.6, 1.6);
+    }
+    const cx=w/2, cy=h*.44, r=h*.30;
+    const sg=g.createLinearGradient(0,cy-r,0,cy+r);
+    sg.addColorStop(0,"#fde68a"); sg.addColorStop(1,"#f43f5e");
+    g.save(); g.beginPath(); g.arc(cx,cy,r,0,6.29); g.clip();
+    g.fillStyle=sg; g.fillRect(cx-r,cy-r,2*r,2*r);
+    g.fillStyle="rgba(30,27,75,.9)";
+    for(let y=cy+r*.15;y<cy+r;y+=h*.055) g.fillRect(cx-r,y,2*r,h*.02);
+    g.restore();
+    g.fillStyle="#0b1026";
+    g.beginPath(); g.moveTo(0,h*.62); g.lineTo(w*.22,h*.42); g.lineTo(w*.4,h*.62);
+    g.lineTo(w*.62,h*.38); g.lineTo(w*.85,h*.6); g.lineTo(w,h*.5); g.lineTo(w,h); g.lineTo(0,h);
+    g.closePath(); g.fill();
+    g.strokeStyle="rgba(34,211,238,.55)"; g.lineWidth=1.2;
+    for(let i=0;i<=10;i++){ const x=w*i/10; g.beginPath(); g.moveTo(w/2+(x-w/2)*.15,h*.66); g.lineTo(x,h); g.stroke(); }
+    for(let i=0;i<7;i++){ const y=h*.66+Math.pow(i/6,1.8)*h*.34; g.beginPath(); g.moveTo(0,y); g.lineTo(w,y); g.stroke(); }
+  }
+  const b=$("demoBefore"), a=$("demoAfter");
+  scene(b.getContext("2d"),640,360);
+  const off=document.createElement("canvas"); off.width=50; off.height=28;
+  scene(off.getContext("2d"),50,28);
+  const ag=a.getContext("2d"); ag.imageSmoothingEnabled=false;
+  ag.drawImage(off,0,0,640,360);
+})();
+
+/* ---------- instruction trail ---------- */
+function updateTrail(){
+  const step = !files.length ? 1 : (!sizeTouched && !hasResult ? 2 : 3);
+  const done1 = files.length > 0, done2 = sizeTouched || hasResult, done3 = hasResult;
+  const set = (el, isDone, isActive) => {
+    el.classList.toggle("done", isDone);
+    el.classList.toggle("active", !isDone && isActive);
+  };
+  set($("ts1"), done1, step===1);
+  set($("ts2"), done2, step===2 && !done2);
+  set($("ts3"), done3, step===3 && !done3);
+  $("tl1").classList.toggle("lit", done1);
+  $("tl2").classList.toggle("lit", done2);
+  const c = $("controls");
+  c.dataset.step = hasResult ? "done" : (done1 ? (step===2 && !sizeTouched ? "2" : "3") : "1");
+}
+new MutationObserver(updateTrail).observe($("thumbs"), {childList:true});
+
+/* ---------- gpu badge + models ---------- */
+async function loadModels(){
+  const r = await fetch("/api/models"); const d = await r.json();
+  const g = d.device;
+  $("gpu").innerHTML = g.type === "cuda"
+    ? `<span class="led"></span><b>${g.name}</b>&nbsp;· ${g.vram_gb} GB · tile ${g.tile}px`
+    : `<span class="led" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></span>no GPU — CPU mode (slow)`;
+  models = d.models;
+  if(!selModel) selModel = (models.find(m=>m.key==="webphoto"&&m.available)||models.find(m=>m.available)||models[0]||{}).key;
+  renderModels();
+}
+function renderModels(){
+  const box = $("models"); box.innerHTML = "";
+  for(const m of models){
+    const el = document.createElement("div");
+    el.style.setProperty("--mc", ACCENTS[m.key] || "#94a3b8");
+    el.className = "model" + (m.key===selModel ? " sel" : "");
+    const badge = SPEED[m.key] ? `<span class="badge ${BADGE[SPEED[m.key]][0]}">${BADGE[SPEED[m.key]][1]}</span>` : "";
+    el.innerHTML = `<span class="dot ${m.available?"have":""}"></span>
+      <span><span class="nm">${m.name}${m.scale?` <small>· ${m.scale}×</small>`:""} ${badge}</span>
+      <div class="ds">${m.desc}</div></span>`;
+    if(!m.available){
+      const b = document.createElement("button");
+      b.className = "dl"; b.textContent = "download";
+      b.onclick = async ev => {
+        ev.stopPropagation();
+        b.disabled = true; b.textContent = "…";
+        await fetch(`/api/models/${encodeURIComponent(m.key)}/download`, {method:"POST"});
+        pollDownloads(m.key);
+      };
+      el.appendChild(b);
+    }
+    el.onclick = () => { selModel = m.key; renderModels(); };
+    box.appendChild(el);
+  }
+  refreshRun();
+}
+function pollDownloads(key){
+  const t = setInterval(async () => {
+    const r = await fetch("/api/downloads"); const d = await r.json();
+    const dl = d.downloads[key];
+    if(!dl || dl.status === "done" || dl.status === "error"){
+      clearInterval(t);
+      if(dl && dl.status === "error") $("err").textContent = "download failed: " + dl.msg;
+      await loadModels();
+    } else {
+      const name = models.find(m=>m.key===key).name;
+      const b = [...document.querySelectorAll(".model .dl")]
+        .find(b => b.closest(".model").textContent.includes(name));
+      if(b) b.textContent = `${Math.round(dl.progress*100)}%`;
+    }
+  }, 700);
+}
+
+/* ---------- files + full-window drop ---------- */
+const drop = $("drop");
+drop.onclick = () => $("file").click();
+$("file").onchange = e => addFiles(e.target.files);
+["dragover","dragenter"].forEach(ev => drop.addEventListener(ev, e => {e.preventDefault(); drop.classList.add("over");}));
+["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => {e.preventDefault(); drop.classList.remove("over");}));
+drop.addEventListener("drop", e => addFiles(e.dataTransfer.files));
+
+let dragDepth = 0;
+window.addEventListener("dragenter", e => {
+  if(e.dataTransfer && [...e.dataTransfer.types].includes("Files")){
+    dragDepth++; $("dropOverlay").classList.add("show");
+  }
+});
+window.addEventListener("dragleave", () => {
+  if(--dragDepth <= 0){ dragDepth = 0; $("dropOverlay").classList.remove("show"); }
+});
+window.addEventListener("dragover", e => e.preventDefault());
+window.addEventListener("drop", e => {
+  e.preventDefault(); dragDepth = 0; $("dropOverlay").classList.remove("show");
+  if(e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+});
+
+function addFiles(list){
+  for(const f of list){
+    if(!/\.(png|jpe?g|webp|bmp|tiff?|avif)$/i.test(f.name)) continue;
+    if(files.includes(f)) continue;
+    files.push(f);
+    beforeURLs.set(f, URL.createObjectURL(f));
+  }
+  renderThumbs(); refreshRun(); updateTrail();
+}
+function renderThumbs(){
+  const t = $("thumbs"); t.innerHTML = "";
+  files.forEach((f, i) => {
+    const d = document.createElement("div");
+    d.className = "th"; d.title = `${f.name} — click to remove`;
+    const img = new Image(); img.src = beforeURLs.get(f);
+    d.appendChild(img);
+    d.onclick = () => { files.splice(i,1); renderThumbs(); refreshRun(); updateTrail(); };
+    t.appendChild(d);
+  });
+}
+
+/* ---------- output mode ---------- */
+function touchSize(){ sizeTouched = true; updateTrail(); }
+$("segScale").onclick = () => { setMode("scale"); touchSize(); };
+$("segTarget").onclick = () => { setMode("target"); touchSize(); };
+function setMode(m){
+  mode = m;
+  $("segScale").classList.toggle("on", m==="scale");
+  $("segTarget").classList.toggle("on", m==="target");
+  $("scaleChips").style.display = m==="scale" ? "flex" : "none";
+  $("targetChips").style.display = m==="target" ? "flex" : "none";
+  $("customRow").style.display = m==="target" ? "flex" : "none";
+}
+document.querySelectorAll("#scaleChips .chip").forEach(c =>
+  c.onclick = () => { scaleVal = +c.dataset.v; touchSize();
+    document.querySelectorAll("#scaleChips .chip").forEach(x=>x.classList.toggle("on", x===c)); });
+document.querySelectorAll("#targetChips .chip").forEach(c =>
+  c.onclick = () => { targetVal = c.dataset.v; customTarget = null; touchSize();
+    document.querySelectorAll("#targetChips .chip").forEach(x=>x.classList.toggle("on", x===c)); });
+$("useCustom").onclick = () => {
+  const w = +$("cw").value, h = +$("ch").value;
+  if(w>0 && h>0){ customTarget = `${w}x${h}`; touchSize();
+    document.querySelectorAll("#targetChips .chip").forEach(x=>x.classList.remove("on")); }
+};
+
+/* ---------- run / poll ---------- */
+function refreshRun(){ $("run").disabled = files.length === 0; }
+let runningJob = null;
+$("run").onclick = async () => {
+  if(runningJob){ await fetch(`/api/job/${runningJob}/cancel`,{method:"POST"}); return; }
+  $("err").textContent = "";
+  const fd = new FormData();
+  files.forEach(f => fd.append("files", f));
+  fd.append("model", selModel);
+  if(mode === "target") fd.append("target_text", customTarget || targetVal);
+  else fd.append("scale", scaleVal);
+  fd.append("tile", $("tile").value);
+  fd.append("fp16", $("fp16").value);
+  fd.append("device", $("device").value);
+  fd.append("fmt", $("format").value);
+  try{
+    const r = await fetch("/api/upscale", {method:"POST", body: fd});
+    if(!r.ok){ $("err").textContent = "server said: " + (await r.text()); return; }
+    const d = await r.json();
+    runningJob = d.id;
+    $("run").textContent = "✕ Stop the forge"; $("run").classList.add("stop");
+    $("prog").style.display = "block";
+    flavorTimer = setInterval(() => {
+      $("flavor").textContent = FLAVORS[Math.random()*FLAVORS.length|0];
+    }, 2600);
+    $("flavor").textContent = FLAVORS[0];
+    updateTrail();
+    poll();
+  }catch(e){ $("err").textContent = String(e); }
+};
+
+function sparkleBurst(container){
+  const colors = ["#8b5cf6","#22d3ee","#f472b6","#fbbf24"];
+  for(let i=0;i<16;i++){
+    const s = document.createElement("span");
+    s.className = "spark"; s.textContent = "✦";
+    s.style.left = (8+Math.random()*84)+"%";
+    s.style.top = (12+Math.random()*55)+"%";
+    s.style.color = colors[i%4];
+    s.style.animationDelay = (Math.random()*.45)+"s";
+    container.appendChild(s);
+    setTimeout(() => s.remove(), 1900);
+  }
+}
+
+function poll(){
+  clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    const r = await fetch(`/api/job/${runningJob}`); const d = await r.json();
+    $("prog").firstElementChild.style.width = `${Math.round(d.progress*100)}%`;
+    $("status").innerHTML = `${d.status === "done" ? "✨" : "🔥"} ${d.msg}` +
+      (d.engine ? ` · <span class="engine">${d.engine}</span>` : "");
+    for(const f of d.files.filter(f => f.status === "done" && f.output)) showResult(f);
+    if(d.status === "done" || d.status === "error" || d.status === "cancelled"){
+      clearInterval(pollTimer); clearInterval(flavorTimer);
+      $("flavor").textContent = d.status === "done" ? "forged to perfection ✦" : "";
+      if(d.status === "done") sparkleBurst($("revealCard"));
+      if(d.status === "error"){ $("err").textContent = d.error || "job failed"; }
+      runningJob = null;
+      $("run").textContent = "⚡ Forge it"; $("run").classList.remove("stop");
+      setTimeout(() => { $("prog").style.display = "none"; }, 900);
+      updateTrail();
+    }
+  }, 500);
+}
+
+/* ---------- compare slider (shared by demo + results) ---------- */
+function attachCompare(cmp){
+  const after = cmp.querySelector(".after");
+  const bar = cmp.querySelector(".bar");
+  const set = e => {
+    const r = cmp.getBoundingClientRect();
+    const pct = Math.min(100, Math.max(0, (e.clientX - r.left) / r.width * 100));
+    after.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
+    bar.style.left = pct + "%";
+  };
+  cmp.addEventListener("pointerdown", e => {
+    cmp.setPointerCapture(e.pointerId); set(e);
+    cmp.querySelector(".tryme")?.remove();
+    const mv = ev => set(ev);
+    cmp.addEventListener("pointermove", mv);
+    cmp.addEventListener("pointerup", () => cmp.removeEventListener("pointermove", mv), {once:true});
+  });
+}
+attachCompare($("demoCmp"));
+
+const shown = new Set();
+function showResult(f){
+  if(shown.has(f.output)) return;
+  shown.add(f.output);
+  $("demo").style.display = "none";
+  hasResult = true;
+  const before = [...beforeURLs.entries()].find(([file]) => file.name === f.name);
+  const el = document.createElement("div");
+  el.className = "result";
+  el.innerHTML = `
+    <div class="cmp">
+      <img src="${before ? before[1] : ""}">
+      <div class="after" style="clip-path:inset(0 50% 0 0)"><img src="/api/output/${encodeURIComponent(f.output)}"></div>
+      <div class="bar" style="left:50%"></div>
+      <span class="tag l">BEFORE</span><span class="tag r">FORGED</span>
+    </div>
+    <div class="meta">
+      <b>${f.name}</b>
+      ${f.size ? `<span class="sz">${f.size[0]}×${f.size[1]}</span>` : ""}
+      <a href="/api/output/${encodeURIComponent(f.output)}" download="${f.output}">Save ⤓</a>
+    </div>`;
+  $("results").prepend(el);
+  attachCompare(el.querySelector(".cmp"));
+}
+
+/* ---------- welcome tour ---------- */
+let tslide = 0;
+const SLIDES = 4;
+function showSlide(i){
+  tslide = Math.max(0, Math.min(SLIDES-1, i));
+  document.querySelectorAll(".tslide").forEach(s => s.classList.toggle("on", +s.dataset.i === tslide));
+  [...$("tdots").children].forEach((d, j) => d.classList.toggle("on", j === tslide));
+  $("tourBack").style.visibility = tslide === 0 ? "hidden" : "visible";
+  $("tourNext").textContent = tslide === SLIDES-1 ? "Let's forge ✦" : "Next →";
+}
+function openTour(){ $("tour").classList.add("show"); showSlide(0); }
+function closeTour(finished){
+  $("tour").classList.remove("show");
+  if(finished) localStorage.setItem("pf_tour_done", "1");
+}
+$("tourBtn").onclick = () => openTour();
+$("tourSkip").onclick = () => closeTour(false);
+$("tourBack").onclick = () => showSlide(tslide-1);
+$("tourNext").onclick = () => tslide === SLIDES-1 ? closeTour(true) : showSlide(tslide+1);
+$("tour").addEventListener("click", e => { if(e.target === $("tour")) closeTour(false); });
+addEventListener("keydown", e => {
+  if(!$("tour").classList.contains("show")) return;
+  if(e.key === "Escape") closeTour(false);
+  if(e.key === "ArrowRight") showSlide(tslide+1);
+  if(e.key === "ArrowLeft") showSlide(tslide-1);
+});
+
+/* ---------- init ---------- */
+fetch("/api/update").then(r => r.json()).then(d => {
+  if (d.available) {
+    $("ubVer").textContent = "v" + d.latest;
+    $("updateBanner").style.display = "block";
+  }
+}).catch(() => {});
+loadModels();
+updateTrail();
+if(!localStorage.getItem("pf_tour_done")) setTimeout(openTour, 600);
+</script>
+</body>
+</html>

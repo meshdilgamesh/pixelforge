@@ -1,0 +1,14 @@
+# user-specific / machine-specific stuff
+.venv/
+models/*
+!models/4x-PixelForge-Signature.pth
+outputs/
+uploads/
+test_images/
+__pycache__/
+*.pyc
+*.part
+.DS_Store
+datasets/
+*.zip
+dist/
