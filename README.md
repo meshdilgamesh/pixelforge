@@ -47,8 +47,14 @@ Nothing platform-specific lives in the engine or UI.
 
 ## Install (Linux)
 
-**Option A — the setup file (recommended):** get `install.sh` (it ships with
-every release, or is included in the zip/tar.gz), then:
+**Option A — one command** (needs `curl` and `tar`, both preinstalled almost everywhere):
+
+```bash
+curl -L https://github.com/meshdilgamesh/pixelforge/releases/latest/download/pixelforge.tar.gz | tar xz && bash PixelForge/install.sh
+```
+
+**Option B — the setup file:** download `install.sh` (it ships with every
+release, or is included in the zip/tar.gz), then:
 
 ```bash
 bash install.sh          # from the extracted release folder
