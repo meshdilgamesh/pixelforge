@@ -74,9 +74,19 @@ def apply(url: str | None = None, dest: Path | None = None) -> None:
         tar_path = tmp / "release.tar.gz"
         urllib.request.urlretrieve(f"{base}/pixelforge.tar.gz", tar_path)
         with tarfile.open(tar_path) as t:
-            # only replace code — never touch the user's models/outputs/datasets
-            members = [m for m in t.getmembers()
-                       if m.name.split("/")[0] not in KEEP_USER_DATA]
+            # releases wrap everything in a "PixelForge/" top-level folder;
+            # strip it so files land directly in the install dir, and never
+            # touch the user's models/outputs/datasets/.venv
+            members = []
+            for m in t.getmembers():
+                parts = m.name.split("/")
+                if parts and parts[0] == "PixelForge":
+                    parts = parts[1:]
+                rel = "/".join(parts)
+                if not rel or rel.split("/")[0] in KEEP_USER_DATA:
+                    continue
+                m.name = rel
+                members.append(m)
             t.extractall(dest, members=members)
     finally:
         import shutil

@@ -48,13 +48,13 @@ def main() -> None:
     tar_path = DIST / "pixelforge.tar.gz"
     with tarfile.open(tar_path, "w:gz") as t:
         for p in files:
-            t.add(p, arcname=str(p.relative_to(ROOT)))
+            t.add(p, arcname="PixelForge/" + str(p.relative_to(ROOT)))
     print(f"{tar_path.name}: {tar_path.stat().st_size/1e6:.1f} MB ({len(files)} files)")
 
     zip_path = DIST / f"pixelforge-{__version__}.zip"
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
         for p in files:
-            z.write(p, str(p.relative_to(ROOT)))
+            z.write(p, "PixelForge/" + str(p.relative_to(ROOT)))
     print(f"{zip_path.name}: {zip_path.stat().st_size/1e6:.1f} MB")
 
     manifest = DIST / "version.json"
