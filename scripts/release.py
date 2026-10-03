@@ -23,11 +23,11 @@ ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "dist"
 EXCLUDE_DIRS = {".venv", "outputs", "uploads", "test_images", "__pycache__",
                 ".git", "datasets", "dist"}
-# user data that must survive updates — only ship the creator's own model
+# user data that must survive updates -- only ship the creator's own model
 ALLOWED_MODELS = {"4x-PixelForge-Signature.pth"}
 
 
-def collect():
+def collect(include_shell_scripts=True):
     files = []
     for p in sorted(ROOT.rglob("*")):
         if p.is_dir() or p.suffix == ".pyc":
@@ -37,23 +37,26 @@ def collect():
             continue
         if "models" in p.parts and p.name not in ALLOWED_MODELS:
             continue
+        if not include_shell_scripts and p.suffix in (".sh",):
+            continue
         files.append(p)
     return files
 
 
 def main() -> None:
     DIST.mkdir(exist_ok=True)
-    files = collect()
+    files_all = collect()
+    files_win = collect(include_shell_scripts=False)
 
     tar_path = DIST / "pixelforge.tar.gz"
     with tarfile.open(tar_path, "w:gz") as t:
-        for p in files:
+        for p in files_all:
             t.add(p, arcname="PixelForge/" + str(p.relative_to(ROOT)))
-    print(f"{tar_path.name}: {tar_path.stat().st_size/1e6:.1f} MB ({len(files)} files)")
+    print(f"{tar_path.name}: {tar_path.stat().st_size/1e6:.1f} MB ({len(files_all)} files)")
 
     zip_path = DIST / f"pixelforge-{__version__}.zip"
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
-        for p in files:
+        for p in files_win:
             z.write(p, "PixelForge/" + str(p.relative_to(ROOT)))
     print(f"{zip_path.name}: {zip_path.stat().st_size/1e6:.1f} MB")
 
@@ -61,7 +64,7 @@ def main() -> None:
     manifest.write_text(json.dumps({"version": __version__, "notes": ""}, indent=2))
     print(f"{manifest.name}: version {__version__}")
     print("\nNext: upload these 3 files to your release location "
-          "(GitHub Releases → attach to a tag like v" + __version__ + ").")
+          "(GitHub Releases -> attach to a tag like v" + __version__ + ").")
 
 
 if __name__ == "__main__":

@@ -37,7 +37,7 @@ $art.Location = New-Object System.Drawing.Point(0, 0)
 $art.Size     = New-Object System.Drawing.Size(240, 480)
 $art.SizeMode = "StretchImage"
 $artPath = Join-Path $PSScriptRoot "setup-art.png"
-if (Test-Path $artPath) { $art.Image = [System.Drawing.Image]::FromFile($artPath) }
+if (Test-Path $artPath) { try { $art.Image = [System.Drawing.Image]::FromFile($artPath) } catch {} }
 $form.Controls.Add($art)
 
 # helper constructors ------------------------------------------------------------
@@ -55,7 +55,7 @@ function New-Label($text, $x, $y, $w, $h, $size, $bold, $color) {
 }
 
 # ---- shared header on content side ----------------------------------------------
-$pageTag = New-Label "Step 1 of 3" 610, 20, 130, 22, 10, $false, $script:COL_DIM
+$pageTag = New-Label "Step 1 of 3" 610  20  130  22  10  $false  $script:COL_DIM
 $form.Controls.Add($pageTag)
 
 # wizard pages: welcome(0), type(1), install(2), done(3)
@@ -69,10 +69,10 @@ $pWelcome.Size = New-Object System.Drawing.Size(530, 420)
 $pWelcome.BackColor = $script:COL_BG
 $form.Controls.Add($pWelcome)
 
-$pWelcome.Controls.Add((New-Label "Welcome to" 0, 30, 520, 40, 20, $false, $script:COL_DIM))
-$pWelcome.Controls.Add((New-Label "PixelForge Setup" 0, 62, 520, 52, 30, $true, $script:COL_TEXT))
+$pWelcome.Controls.Add((New-Label "Welcome to" 0  30  520  40  20  $false  $script:COL_DIM))
+$pWelcome.Controls.Add((New-Label "PixelForge Setup" 0  62  520  52  30  $true  $script:COL_TEXT))
 
-$pWelcome.Controls.Add((New-Label "Forge blurry, low-resolution images into sharp, detailed 4K and 8K masterpieces - right on your own computer." 0, 130, 520, 60, 12, $false, $script:COL_TEXT))
+$pWelcome.Controls.Add((New-Label "Forge blurry, low-resolution images into sharp, detailed 4K and 8K masterpieces - right on your own computer." 0  130  520  60  12  $false  $script:COL_TEXT))
 
 $wBullets = @(
     "Free and open source - no subscription, no account",
@@ -82,11 +82,11 @@ $wBullets = @(
 )
 $wy = 205
 foreach ($b in $wBullets) {
-    $pWelcome.Controls.Add((New-Label "[+]" 4, $wy, 34, 24, 11, $true, $script:COL_CYAN))
-    $pWelcome.Controls.Add((New-Label $b 40, $wy, 480, 24, 11, $false, $script:COL_TEXT))
+    $pWelcome.Controls.Add((New-Label "[+]" 4  $wy  34  24  11  $true  $script:COL_CYAN))
+    $pWelcome.Controls.Add((New-Label $b 40  $wy  480  24  11  $false  $script:COL_TEXT))
     $wy += 30
 }
-$pWelcome.Controls.Add((New-Label "Install size: about 6 GB of disk. Internet needed once for PyTorch." 0, 350, 520, 24, 10, $false, $script:COL_DIM))
+$pWelcome.Controls.Add((New-Label "Install size: about 6 GB of disk. Internet needed once for PyTorch." 0  350  520  24  10  $false  $script:COL_DIM))
 
 # ================================== PAGE 1: setup type ===========================
 $pType = New-Object System.Windows.Forms.Panel
@@ -95,7 +95,7 @@ $pType.Size = New-Object System.Drawing.Size(530, 420)
 $pType.BackColor = $script:COL_BG
 $form.Controls.Add($pType)
 
-$pType.Controls.Add((New-Label "Setup Type" 0, 26, 520, 44, 26, $true, $script:COL_TEXT))
+$pType.Controls.Add((New-Label "Setup Type" 0  26  520  44  26  $true  $script:COL_TEXT))
 
 # card 1: Complete
 $cardComplete = New-Object System.Windows.Forms.Panel
@@ -112,8 +112,8 @@ $rbComplete.Location = New-Object System.Drawing.Point(14, 10)
 $rbComplete.Size = New-Object System.Drawing.Size(480, 24)
 $rbComplete.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
 $cardComplete.Controls.Add($rbComplete)
-$cardComplete.Controls.Add((New-Label "Installs everything: app, AI models, Start Menu icon and auto-updates." 18, 40, 480, 20, 10, $false, $script:COL_DIM))
-$cardComplete.Controls.Add((New-Label "Recommended for most users." 18, 60, 480, 20, 10, $false, $script:COL_DIM))
+$cardComplete.Controls.Add((New-Label "Installs everything: app, AI models, Start Menu icon and auto-updates." 18  40  480  20  10  $false  $script:COL_DIM))
+$cardComplete.Controls.Add((New-Label "Recommended for most users." 18  60  480  20  10  $false  $script:COL_DIM))
 
 # card 2: Custom
 $cardCustom = New-Object System.Windows.Forms.Panel
@@ -129,11 +129,11 @@ $rbCustom.Location = New-Object System.Drawing.Point(14, 10)
 $rbCustom.Size = New-Object System.Drawing.Size(480, 24)
 $rbCustom.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
 $cardCustom.Controls.Add($rbCustom)
-$cardCustom.Controls.Add((New-Label "Choose your own install folder and skip the Start Menu icon." 18, 40, 480, 20, 10, $false, $script:COL_DIM))
-$cardCustom.Controls.Add((New-Label "Recommended for advanced users." 18, 60, 480, 20, 10, $false, $script:COL_DIM))
+$cardCustom.Controls.Add((New-Label "Choose your own install folder and skip the Start Menu icon." 18  40  480  20  10  $false  $script:COL_DIM))
+$cardCustom.Controls.Add((New-Label "Recommended for advanced users." 18  60  480  20  10  $false  $script:COL_DIM))
 
 # location row (enabled for Custom)
-$locLabel = New-Label "Install location:" 0, 300, 200, 22, 11, $true, $script:COL_TEXT
+$locLabel = New-Label "Install location:" 0  300  200  22  11  $true  $script:COL_TEXT
 $pType.Controls.Add($locLabel)
 $locBox = New-Object System.Windows.Forms.TextBox
 $locBox.Text = "$env:LOCALAPPDATA\PixelForge"
@@ -177,15 +177,15 @@ $pInstall.Size = New-Object System.Drawing.Size(530, 420)
 $pInstall.BackColor = $script:COL_BG
 $form.Controls.Add($pInstall)
 
-$pInstall.Controls.Add((New-Label "Installing PixelForge" 0, 40, 520, 44, 26, $true, $script:COL_TEXT))
-$pInstall.Controls.Add((New-Label "This takes a few minutes on the first run - the big download happens only once." 0, 96, 520, 24, 11, $false, $script:COL_DIM))
-$script:statusLbl = New-Label "Preparing..." 0, 150, 520, 24, 12, $true, $script:COL_CYAN
+$pInstall.Controls.Add((New-Label "Installing PixelForge" 0  40  520  44  26  $true  $script:COL_TEXT))
+$pInstall.Controls.Add((New-Label "This takes a few minutes on the first run - the big download happens only once." 0  96  520  24  11  $false  $script:COL_DIM))
+$script:statusLbl = New-Label "Preparing..." 0  150  520  24  12  $true  $script:COL_CYAN
 $pInstall.Controls.Add($statusLbl)
 $script:bar = New-Object System.Windows.Forms.ProgressBar
 $bar.Location = New-Object System.Drawing.Point(0, 184)
 $bar.Size = New-Object System.Drawing.Size(520, 26)
 $pInstall.Controls.Add($bar)
-$script:detailLbl = New-Label "" 0, 224, 520, 60, 10, $false, $script:COL_DIM
+$script:detailLbl = New-Label "" 0  224  520  60  10  $false  $script:COL_DIM
 $pInstall.Controls.Add($detailLbl)
 
 # ================================== PAGE 3: done =================================
@@ -195,9 +195,9 @@ $pDone.Size = New-Object System.Drawing.Size(530, 420)
 $pDone.BackColor = $script:COL_BG
 $form.Controls.Add($pDone)
 
-$pDone.Controls.Add((New-Label "Installation complete!" 0, 60, 520, 48, 28, $true, $script:COL_OK))
-$pDone.Controls.Add((New-Label "PixelForge has been installed successfully." 0, 120, 520, 24, 12, $false, $script:COL_TEXT))
-$doneMsg = New-Label "" 0, 152, 520, 60, 11, $false, $script:COL_DIM
+$pDone.Controls.Add((New-Label "Installation complete!" 0  60  520  48  28  $true  $script:COL_OK))
+$pDone.Controls.Add((New-Label "PixelForge has been installed successfully." 0  120  520  24  12  $false  $script:COL_TEXT))
+$doneMsg = New-Label "" 0  152  520  60  11  $false  $script:COL_DIM
 $pDone.Controls.Add($doneMsg)
 $launchNow = New-Object System.Windows.Forms.CheckBox
 $launchNow.Text = "Launch PixelForge now"
