@@ -1,6 +1,8 @@
-# PixelForge Setup — GUI installer for Windows
+# PixelForge Setup - GUI installer for Windows
 # Shows a real setup window: welcome, install-location picker, progress.
 # Launched by setup.bat. No admin rights needed.
+# NOTE: keep this file plain ASCII - Windows PowerShell 5.1 reads .ps1 files
+# without a BOM as ANSI, and non-ASCII characters corrupt the parse.
 
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.Windows.Forms
@@ -26,7 +28,7 @@ $banner.Location         = New-Object System.Drawing.Point(24, 14)
 $form.Controls.Add($banner)
 
 $tagline                 = New-Object System.Windows.Forms.Label
-$tagline.Text            = "Free, open-source AI image upscaler — runs 100% on your PC"
+$tagline.Text            = "Free, open-source AI image upscaler - runs 100 percent on your PC"
 $tagline.ForeColor       = [System.Drawing.Color]::Gainsboro
 $tagline.AutoSize        = $true
 $tagline.Location        = New-Object System.Drawing.Point(26, 58)
@@ -107,7 +109,7 @@ $installBtn.Add_Click({
     $browse.Enabled = $false
     $locBox.Enabled = $false
     $src  = $PSScriptRoot
-    $dest = $locBox.Text.Trim()
+    $dest = $locBox.Text.Trim().TrimEnd("\")
 
     try {
         if (-not (Test-Path (Join-Path $src "pixelforge.py"))) {
@@ -116,8 +118,8 @@ $installBtn.Add_Click({
         Set-Status "Creating install folder..." 5
         New-Item -ItemType Directory -Force -Path $dest | Out-Null
 
-        Set-Status "Copying app files..." 15
-        robocopy $src $dest /E /NFL /NDL /NJH /NJS /XD .venv outputs uploads datasets __pycache__ .git dist | Out-Null
+        Set-Status "Copying app files (includes any downloaded Python environment)..." 15
+        robocopy $src $dest /E /NFL /NDL /NJH /NJS /XD outputs uploads datasets __pycache__ .git dist | Out-Null
         if ($LASTEXITCODE -ge 8) { throw "Copying files failed (robocopy code $LASTEXITCODE). Check antivirus notifications and try another install location." }
 
         Set-Status "Setting up Python tooling (one time)..." 30
@@ -139,14 +141,19 @@ $installBtn.Add_Click({
             if ($LASTEXITCODE -ne 0) { throw "Creating the Python environment failed. Check your internet connection." }
         }
 
-        Set-Status "Installing PyTorch with NVIDIA CUDA (~3 GB, one time)..." 50
-        & $uv pip install -p $venvPy torch --index-url https://download.pytorch.org/whl/cu126
-        if ($LASTEXITCODE -ne 0) { throw "Downloading PyTorch failed. Check your internet connection and retry." }
+        Set-Status "Checking PyTorch with NVIDIA CUDA support..." 50
+        & $venvPy -c "import torch" 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            Set-Status "Installing PyTorch with NVIDIA CUDA (about 3 GB, one time)..." 55
+            & $uv pip install -p $venvPy torch --index-url https://download.pytorch.org/whl/cu126
+            if ($LASTEXITCODE -ne 0) { throw "Downloading PyTorch failed. Check your internet connection and retry." }
+        }
 
         if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) {
-            $hasCuda = & $venvPy -c "import torch,sys;sys.exit(0 if torch.cuda.is_available() else 1)" 2>$null
+            Set-Status "Verifying CUDA support..." 70
+            & $venvPy -c "import torch,sys; sys.exit(0 if torch.cuda.is_available() else 1)" 2>$null
             if ($LASTEXITCODE -ne 0) {
-                Set-Status "Upgrading PyTorch to the CUDA build (one time)..." 70
+                Set-Status "Upgrading PyTorch to the CUDA build (one time)..." 75
                 & $uv pip install -p $venvPy --reinstall-package torch --index-url https://download.pytorch.org/whl/cu126
             }
         }
