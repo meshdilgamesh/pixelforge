@@ -3,8 +3,8 @@
 How it works: the publisher (you) uploads two small files to a release
 location (e.g. GitHub Releases "latest"): version.json and pixelforge.tar.gz.
 Installed copies check version.json (shown as a banner in the UI), and
-`pixelforge update` downloads+applies the new code in place. User data —
-models/, outputs/, uploads/, datasets/, .venv — is never touched.
+`pixelforge update` downloads+applies the new code in place. User data --
+models/, outputs/, uploads/, datasets/, .venv -- is never touched.
 
 The release location is configured via the PIXELFORGE_RELEASE_URL environment
 variable, e.g.:
@@ -26,8 +26,12 @@ from . import __version__
 KEEP_USER_DATA = {"models", "outputs", "uploads", "datasets", ".venv", "__pycache__", ".git"}
 
 
+DEFAULT_RELEASE_URL = "https://github.com/meshdilgamesh/pixelforge/releases/latest/download"
+
+
 def release_url(explicit: str | None = None) -> str:
-    return (explicit or os.environ.get("PIXELFORGE_RELEASE_URL") or "").rstrip("/")
+    """Env var overrides; otherwise the official release location is used."""
+    return (explicit or os.environ.get("PIXELFORGE_RELEASE_URL") or DEFAULT_RELEASE_URL).rstrip("/")
 
 
 def check(url: str | None = None) -> dict | None:
@@ -48,7 +52,7 @@ def check(url: str | None = None) -> dict | None:
             "available": latest != __version__ and latest != "",
             "notes": data.get("notes", ""),
         }
-    except Exception as e:  # noqa: BLE001 — offline / not hosted yet is normal
+    except Exception as e:  # noqa: BLE001 -- offline / not hosted yet is normal
         return {"configured": True, "error": str(e), "local": __version__,
                 "latest": None, "available": False, "notes": ""}
 
@@ -68,7 +72,7 @@ def apply(url: str | None = None, dest: Path | None = None) -> None:
         print(f"Already up to date (v{__version__}).")
         return
 
-    print(f"Updating PixelForge {__version__} -> {info['latest']} …")
+    print(f"Updating PixelForge {__version__} -> {info['latest']} ...")
     tmp = Path(tempfile.mkdtemp(prefix="pixelforge-update-"))
     try:
         tar_path = tmp / "release.tar.gz"
@@ -91,7 +95,7 @@ def apply(url: str | None = None, dest: Path | None = None) -> None:
     finally:
         import shutil
         shutil.rmtree(tmp, ignore_errors=True)
-    print(f"Done — PixelForge is now v{info['latest']}. Your models and outputs were kept.")
+    print(f"Done -- PixelForge is now v{info['latest']}. Your models and outputs were kept.")
     print("Restart the app to run the new version.")
 
 
