@@ -103,6 +103,7 @@ $cardComplete.Location = New-Object System.Drawing.Point(0, 86)
 $cardComplete.Size = New-Object System.Drawing.Size(520, 92)
 $cardComplete.BackColor = $script:COL_PANEL
 $pType.Controls.Add($cardComplete)
+$script:typeReady = $false
 $rbComplete = New-Object System.Windows.Forms.RadioButton
 $rbComplete.Text = "Complete  (recommended)"
 $rbComplete.Checked = $true
@@ -144,31 +145,45 @@ $browse = New-Object System.Windows.Forms.Button
 $browse.Text = "Browse..."
 $browse.Location = New-Object System.Drawing.Point(430, 325)
 $browse.Size = New-Object System.Drawing.Size(88, 26)
+$browse.FlatStyle = "Flat"
+$browse.FlatAppearance.BorderColor = $script:COL_CYAN
+$browse.BackColor = $script:COL_PANEL
+$browse.ForeColor = $script:COL_TEXT
 $pType.Controls.Add($browse)
 
-$rbComplete.Add_CheckedChanged({
-    if ($rbComplete.Checked) {
-        $cardComplete.BackColor = $script:COL_PANEL2
-        $cardCustom.BackColor = $script:COL_PANEL
-        $locBox.Enabled = $false
-        $browse.Enabled = $false
-    }
-})
-$rbCustom.Add_CheckedChanged({
-    if ($rbCustom.Checked) {
+# the two radios live in different card panels, so WinForms does NOT
+# uncheck the sibling automatically - this function owns the state
+function Set-TypeMode([bool]$custom) {
+    if (-not $script:typeReady) { return }
+    if ($custom) {
+        $script:rbComplete.Checked = $false
+        $script:rbCustom.Checked = $true
         $cardCustom.BackColor = $script:COL_PANEL2
         $cardComplete.BackColor = $script:COL_PANEL
-        $locBox.Enabled = $true
-        $browse.Enabled = $true
+        $locLabel.Visible = $true
+        $locBox.Visible = $true
+        $browse.Visible = $true
+    } else {
+        $script:rbCustom.Checked = $false
+        $script:rbComplete.Checked = $true
+        $cardComplete.BackColor = $script:COL_PANEL2
+        $cardCustom.BackColor = $script:COL_PANEL
+        $locLabel.Visible = $false
+        $locBox.Visible = $false
+        $browse.Visible = $false
     }
-})
-$cardComplete.Add_Click({ $rbComplete.Checked = $true })
-$cardCustom.Add_Click({ $rbCustom.Checked = $true })
+}
+$rbComplete.Add_CheckedChanged({ if ($rbComplete.Checked) { Set-TypeMode $false } })
+$rbCustom.Add_CheckedChanged({ if ($rbCustom.Checked) { Set-TypeMode $true } })
+$cardComplete.Add_Click({ Set-TypeMode $false })
+$cardCustom.Add_Click({ Set-TypeMode $true })
 $browse.Add_Click({
     $dlg = New-Object System.Windows.Forms.FolderBrowserDialog
     $dlg.Description = "Where should PixelForge be installed?"
     if ($dlg.ShowDialog() -eq "OK") { $locBox.Text = $dlg.SelectedPath }
 })
+$script:typeReady = $true
+Set-TypeMode $false
 
 # ================================== PAGE 2: installing ===========================
 $pInstall = New-Object System.Windows.Forms.Panel
