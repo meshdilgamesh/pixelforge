@@ -1,7 +1,7 @@
 # PixelForge Setup - modern installation wizard for Windows
 # Classic wizard flow: Welcome -> Setup Type -> Installing -> Finish
 # with Back / Next / Cancel navigation and a branded side banner.
-# Launched by setup.bat. No admin rights needed.
+# Launched by INSTALL-PIXELFORGE.bat. No admin rights needed.
 # NOTE: keep this file plain ASCII - Windows PowerShell 5.1 reads .ps1
 # files without a BOM as ANSI, and non-ASCII corrupts the parse.
 
@@ -299,7 +299,7 @@ function Run-Install {
         $dest = $script:destPath
 
         if (-not (Test-Path (Join-Path $src "pixelforge.py"))) {
-            throw "pixelforge.py not found next to this installer. Please extract the zip first, then run setup.bat from the extracted folder."
+            throw "pixelforge.py not found next to this installer. Please extract the zip first, then run INSTALL-PIXELFORGE.bat from the extracted folder."
         }
         Set-Status "Creating install folder..." 5
         New-Item -ItemType Directory -Force -Path $dest | Out-Null

@@ -37,8 +37,10 @@ def collect(include_shell_scripts=True):
             continue
         if "models" in p.parts and p.name not in ALLOWED_MODELS:
             continue
-        if not include_shell_scripts and p.suffix in (".sh",):
-            continue
+        if not include_shell_scripts:
+            # the Windows package: only Windows launchers, no console installer
+            if p.suffix in (".sh",) or p.name in ("install.bat",):
+                continue
         files.append(p)
     return files
 

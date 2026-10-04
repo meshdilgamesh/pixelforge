@@ -2,7 +2,7 @@
 rem ============================================================
 rem  PixelForge installer for Windows (simple console version)
 rem  Tip: for a setup window with an install-location picker,
-rem  run setup.bat instead.
+rem  run INSTALL-PIXELFORGE.bat instead.
 rem ============================================================
 setlocal enabledelayedexpansion
 title PixelForge Setup

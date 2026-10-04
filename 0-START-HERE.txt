@@ -12,7 +12,7 @@ This package contains EVERYTHING: the app, all 9 AI models
    First run downloads Python + PyTorch (~3 GB, one time, needs internet).
 
  WINDOWS
-   1. double-click  setup.bat      (recommended - setup window with
+   1. double-click  INSTALL-PIXELFORGE      (recommended - setup window with
                                     install-location picker)
       or:           install.bat    (console installer)
       or:           start.bat      (portable, no install)
