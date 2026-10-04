@@ -6,6 +6,10 @@
 # files without a BOM as ANSI, and non-ASCII corrupts the parse.
 
 $ErrorActionPreference = "Stop"
+# render sharp on high-DPI displays (125/150 percent scaling) instead of
+# being bitmap-stretched blurry
+Add-Type -TypeDefinition "using System.Runtime.InteropServices; public static class DpiHelper { [DllImport(\"user32.dll\")] public static extern bool SetProcessDPIAware(); }"
+[DpiHelper]::SetProcessDPIAware() | Out-Null
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
