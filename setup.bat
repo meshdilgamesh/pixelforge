@@ -1,5 +1,5 @@
 @echo off
-rem PixelForge Setup -- opens the graphical installer window.
-rem (setup.ps1 does all the work; this file just launches it.)
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0setup.ps1"
-if errorlevel 1 pause
+rem PixelForge Setup - launches the graphical wizard.
+rem The PowerShell window is hidden; only the setup GUI is shown.
+start "" powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0setup.ps1"
+exit

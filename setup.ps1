@@ -25,7 +25,7 @@ $script:COL_ERR   = [System.Drawing.Color]::FromArgb(251, 113, 133)
 # ---- form --------------------------------------------------------------------
 $form                 = New-Object System.Windows.Forms.Form
 $form.Text            = "PixelForge Setup"
-$form.Size            = New-Object System.Drawing.Size(820, 560)
+$form.ClientSize      = New-Object System.Drawing.Size(820, 570)
 $form.StartPosition   = "CenterScreen"
 $form.FormBorderStyle = "FixedDialog"
 $form.MaximizeBox     = $false
@@ -34,7 +34,7 @@ $form.BackColor       = $script:COL_BG
 # ---- left art rail -------------------------------------------------------------
 $art = New-Object System.Windows.Forms.PictureBox
 $art.Location = New-Object System.Drawing.Point(0, 0)
-$art.Size     = New-Object System.Drawing.Size(240, 480)
+$art.Size     = New-Object System.Drawing.Size(240, 570)
 $art.SizeMode = "StretchImage"
 $artPath = Join-Path $PSScriptRoot "setup-art.png"
 if (Test-Path $artPath) { try { $art.Image = [System.Drawing.Image]::FromFile($artPath) } catch {} }
@@ -210,20 +210,32 @@ $pDone.Controls.Add($launchNow)
 # ================================== navigation ==================================
 $btnBack   = New-Object System.Windows.Forms.Button
 $btnBack.Text = "< Back"
-$btnBack.Size = New-Object System.Drawing.Size(88, 30)
-$btnBack.Location = New-Object System.Drawing.Point(470, 502)
+$btnBack.Size = New-Object System.Drawing.Size(88, 32)
+$btnBack.Location = New-Object System.Drawing.Point(470, 524)
+$btnBack.FlatStyle = "Flat"
+$btnBack.FlatAppearance.BorderColor = $script:COL_VIOLET
+$btnBack.BackColor = $script:COL_PANEL
+$btnBack.ForeColor = $script:COL_TEXT
 $form.Controls.Add($btnBack)
 
 $btnNext   = New-Object System.Windows.Forms.Button
 $btnNext.Text = "Next >"
-$btnNext.Size = New-Object System.Drawing.Size(96, 30)
-$btnNext.Location = New-Object System.Drawing.Point(564, 502)
+$btnNext.Size = New-Object System.Drawing.Size(96, 32)
+$btnNext.Location = New-Object System.Drawing.Point(564, 524)
+$btnNext.FlatStyle = "Flat"
+$btnNext.FlatAppearance.BorderSize = 0
+$btnNext.BackColor = $script:COL_VIOLET
+$btnNext.ForeColor = [System.Drawing.Color]::White
 $form.Controls.Add($btnNext)
 
 $btnCancel = New-Object System.Windows.Forms.Button
 $btnCancel.Text = "Cancel"
-$btnCancel.Size = New-Object System.Drawing.Size(80, 30)
-$btnCancel.Location = New-Object System.Drawing.Point(666, 502)
+$btnCancel.Size = New-Object System.Drawing.Size(80, 32)
+$btnCancel.Location = New-Object System.Drawing.Point(666, 524)
+$btnCancel.FlatStyle = "Flat"
+$btnCancel.FlatAppearance.BorderSize = 0
+$btnCancel.BackColor = $script:COL_PANEL
+$btnCancel.ForeColor = $script:COL_TEXT
 $form.Controls.Add($btnCancel)
 
 function Show-Page($n) {
@@ -237,7 +249,8 @@ function Show-Page($n) {
     if ($n -eq 0) { $pageTag.Text = "Step 1 of 3"; $btnNext.Text = "Next >";  $btnNext.Enabled = $true }
     if ($n -eq 1) { $pageTag.Text = "Step 2 of 3"; $btnNext.Text = "Install"; $btnNext.Enabled = $true }
     if ($n -eq 2) { $pageTag.Text = "Step 3 of 3"; $btnNext.Enabled = $false }
-    if ($n -eq 3) { $pageTag.Text = "Done";        $btnNext.Text = "Finish";  $btnNext.Enabled = $true }
+    if ($n -eq 3) { $pageTag.Text = "Done";        $btnNext.Text = "Finish";  $btnNext.Enabled = $true; $btnNext.BackColor = $script:COL_OK }
+    if ($n -lt 3 -and $n -ne 2) { $btnNext.BackColor = $script:COL_VIOLET }
     $form.Refresh()
 }
 

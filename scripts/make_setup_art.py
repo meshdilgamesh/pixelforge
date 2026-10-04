@@ -11,7 +11,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
-W, H = 480, 960
+W, H = 480, 1140
 
 img = Image.new("RGB", (W, H))
 d = ImageDraw.Draw(img)
