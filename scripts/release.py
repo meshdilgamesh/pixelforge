@@ -27,6 +27,69 @@ EXCLUDE_DIRS = {".venv", "outputs", "uploads", "test_images", "__pycache__",
 ALLOWED_MODELS = {"4x-PixelForge-Signature.pth"}
 
 
+
+
+def verify_windows_scripts():
+    """Refuse to build if the Windows scripts can silently die on a user's PC.
+    Checks (lessons from real-world failures):
+      1. pure ASCII - PS 5.1 reads no-BOM files as ANSI; non-ASCII corrupts them
+      2. no backslash-doublequote in .ps1 - PS does not escape with backslash;
+         it truncates the string at the wrong place (silent Add-Type failure)
+      3. string-aware paren/brace/bracket balance for .ps1
+    """
+    import re as _re
+    problems = []
+    for p in sorted(ROOT.rglob("*")):
+        if p.suffix not in (".ps1", ".bat") or not p.is_file():
+            continue
+        data = p.read_bytes()
+        high = [i for i, b in enumerate(data) if b > 0x7F]
+        if high:
+            problems.append(f"{p.name}: non-ASCII bytes at {high[:3]} (PS 5.1 ANSI corruption)")
+        text = data.decode("ascii")
+        if p.suffix == ".ps1":
+            # backslash-quote inside double-quoted regions truncates strings
+            in_dq = False
+            for i, ch in enumerate(text):
+                if ch == '"' and (i == 0 or text[i-1] != "`"):
+                    in_dq = not in_dq
+                elif ch == "\\" and in_dq and i + 1 < len(text) and text[i+1] == '"':
+                    problems.append(f"{p.name}: backslash-quote at offset {i} truncates a PS string")
+                    break
+            stack, line, i, state = [], 1, 0, None
+            while i < len(text):
+                ch = text[i]
+                if ch == "\n":
+                    line += 1
+                    if state == "#":
+                        state = None
+                if state == "#":
+                    i += 1; continue
+                if state:
+                    if ch == "`": i += 2; continue
+                    if ch == state: state = None
+                    i += 1; continue
+                if ch == "#": state = "#"; i += 1; continue
+                if ch == "`": i += 2; continue
+                if ch in "({[": stack.append((ch, line)); i += 1; continue
+                if ch in ")}]":
+                    pairs = {")": "(", "}": "{", "]": "["}
+                    if not stack or stack[-1][0] != pairs[ch]:
+                        problems.append(f"{p.name}: mismatched {ch} at line {line}")
+                        if stack: stack.pop()
+                    else:
+                        stack.pop()
+                    i += 1; continue
+                i += 1
+            if stack:
+                problems.append(f"{p.name}: unclosed {stack[-1]}")
+    if problems:
+        for pr in problems:
+            print("SCRIPT CHECK FAILED:", pr)
+        raise SystemExit("Windows script checks failed - fix before releasing.")
+    print("Windows script checks: OK (ASCII, quoting, structure)")
+
+
 def collect(include_shell_scripts=True):
     files = []
     for p in sorted(ROOT.rglob("*")):
@@ -47,6 +110,7 @@ def collect(include_shell_scripts=True):
 
 def main() -> None:
     DIST.mkdir(exist_ok=True)
+    verify_windows_scripts()
     files_all = collect()
     files_win = collect(include_shell_scripts=False)
 

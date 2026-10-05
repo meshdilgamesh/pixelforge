@@ -6,10 +6,22 @@
 # files without a BOM as ANSI, and non-ASCII corrupts the parse.
 
 $ErrorActionPreference = "Stop"
+trap {
+    "$_" | Out-File "$env:TEMP\pixelforge-setup-error.txt" -Encoding unicode
+    try {
+        Add-Type -AssemblyName System.Windows.Forms
+        [System.Windows.Forms.MessageBox]::Show(
+            "PixelForge Setup failed to start:" + [Environment]::NewLine +
+            $_.Exception.Message + [Environment]::NewLine + [Environment]::NewLine +
+            "Details saved to: $env:TEMP\pixelforge-setup-error.txt",
+            "PixelForge Setup", "OK", "Hand") | Out-Null
+    } catch {}
+    exit 1
+}
 # render sharp on high-DPI displays (125/150 percent scaling) instead of
 # being bitmap-stretched blurry
-Add-Type -TypeDefinition "using System.Runtime.InteropServices; public static class DpiHelper { [DllImport(\"user32.dll\")] public static extern bool SetProcessDPIAware(); }"
-[DpiHelper]::SetProcessDPIAware() | Out-Null
+Add-Type -TypeDefinition 'using System.Runtime.InteropServices; public static class DpiHelper { [DllImport("user32.dll")] public static extern bool SetProcessDPIAware(); }'
+try { [DpiHelper]::SetProcessDPIAware() | Out-Null } catch {}
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
@@ -297,7 +309,7 @@ $btnNext.Add_Click({
         # resolve destination
         if ($rbComplete.Checked) { $script:destPath = "$env:LOCALAPPDATA\PixelForge" }
         else {
-            $script:destPath = $locBox.Text.Trim().TrimEnd("\")
+            $script:destPath = $locBox.Text.Trim().TrimEnd([char]92)
             if (-not $script:destPath) {
                 [System.Windows.Forms.MessageBox]::Show("Please choose an install location first.", "PixelForge Setup", "OK", "Warning") | Out-Null
                 return
