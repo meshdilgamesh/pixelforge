@@ -210,6 +210,9 @@ env -u LD_LIBRARY_PATH .venv/bin/python scripts/train.py \
 - **Weird colors / NaN artifacts** → switch precision to fp32 in Advanced.
 - **No GPU detected** → check `nvidia-smi` works; PixelForge then falls back
   to CPU (works, but 10–50× slower).
+- **Windows installer problem?** The setup wizard logs every step to
+  `%TEMP%\pixelforge-setup.log` and shows the last lines in the error box —
+  send that log when reporting an issue.
 - **Where do results go?** `outputs/` in the project folder (UI shows a
   Download button too).
 

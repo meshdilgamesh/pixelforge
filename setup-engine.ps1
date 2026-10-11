@@ -325,6 +325,14 @@ $btnNext.Add_Click({
 })
 
 function Run-Install {
+    $log = Join-Path $env:TEMP "pixelforge-setup.log"
+    "=== PixelForge setup - $(Get-Date) ===" | Out-File $log -Encoding unicode
+
+    # native tools (uv, python) write progress and warnings to STDERR; with
+    # ErrorActionPreference='Stop' + stderr redirection, PowerShell 5.1 turns
+    # even a EXPECTED probe failure into a fatal error. Exit codes are checked
+    # explicitly instead, and all output is logged for diagnosis.
+    $ErrorActionPreference = "Continue"
     try {
         $src  = $PSScriptRoot
         $dest = $script:destPath
@@ -336,7 +344,7 @@ function Run-Install {
         New-Item -ItemType Directory -Force -Path $dest | Out-Null
 
         Set-Status "Copying app files (reuses any downloaded Python environment)..." 15
-        robocopy $src $dest /E /NFL /NDL /NJH /NJS /XD outputs uploads datasets __pycache__ .git dist | Out-Null
+        robocopy $src $dest /E /NFL /NDL /NJH /NJS /XD outputs uploads datasets __pycache__ .git dist 2>&1 | Out-File $log -Append -Encoding unicode
         if ($LASTEXITCODE -ge 8) { throw "Copying files failed (robocopy code $LASTEXITCODE). Check antivirus notifications and try another install location." }
 
         Set-Status "Setting up Python tooling (one time)..." 30
@@ -354,7 +362,7 @@ function Run-Install {
         $venvPy = Join-Path $dest ".venv\Scripts\python.exe"
         if (-not (Test-Path $venvPy)) {
             Set-Status "Creating Python environment..." 40
-            & $uv venv --python 3.13 (Join-Path $dest ".venv")
+            & $uv venv --python 3.13 (Join-Path $dest ".venv") 2>&1 | Out-File $log -Append -Encoding unicode
             if ($LASTEXITCODE -ne 0) { throw "Creating the Python environment failed. Check your internet connection." }
         }
 
@@ -362,7 +370,7 @@ function Run-Install {
         & $venvPy -c "import torch" 2>$null
         if ($LASTEXITCODE -ne 0) {
             Set-Status "Installing PyTorch with NVIDIA CUDA (about 3 GB, one time)..." 55
-            & $uv pip install -p $venvPy torch --index-url https://download.pytorch.org/whl/cu126
+            & $uv pip install -p $venvPy torch --index-url https://download.pytorch.org/whl/cu126 2>&1 | Out-File $log -Append -Encoding unicode
             if ($LASTEXITCODE -ne 0) { throw "Downloading PyTorch failed. Check your internet connection and retry." }
         }
 
@@ -371,12 +379,13 @@ function Run-Install {
             & $venvPy -c "import torch,sys; sys.exit(0 if torch.cuda.is_available() else 1)" 2>$null
             if ($LASTEXITCODE -ne 0) {
                 Set-Status "Upgrading PyTorch to the CUDA build (one time)..." 75
-                & $uv pip install -p $venvPy --reinstall-package torch --index-url https://download.pytorch.org/whl/cu126
+                & $uv pip install -p $venvPy --reinstall-package torch --index-url https://download.pytorch.org/whl/cu126 2>&1 | Out-File $log -Append -Encoding unicode
+                if ($LASTEXITCODE -ne 0) { throw "Upgrading PyTorch to the CUDA build failed. Check your internet connection and retry." }
             }
         }
 
         Set-Status "Installing app dependencies..." 85
-        & $uv pip install -p $venvPy spandrel pillow numpy fastapi "uvicorn[standard]" python-multipart
+        & $uv pip install -p $venvPy spandrel pillow numpy fastapi "uvicorn[standard]" python-multipart 2>&1 | Out-File $log -Append -Encoding unicode
         if ($LASTEXITCODE -ne 0) { throw "Installing app dependencies failed. Check your internet connection and retry." }
 
         if ($rbComplete.Checked) {
@@ -390,16 +399,22 @@ function Run-Install {
             $doneMsg.Text = "Portable install. Run start.bat in:`n$dest"
         }
 
+        "=== setup complete ===" | Out-File $log -Append -Encoding unicode
         Set-Status "Done! PixelForge is installed." 100
         $script:installing = $false
         Show-Page 3
     }
     catch {
+        "=== SETUP FAILED: $($_.Exception.Message) ===" | Out-File $log -Append -Encoding unicode
         $script:installing = $false
         $statusLbl.Text = "Setup problem"
         $statusLbl.ForeColor = $script:COL_ERR
         $bar.Value = 0
-        [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, "PixelForge Setup", "OK", "Warning") | Out-Null
+        $tail = ""
+        try { $tail = (Get-Content $log -Tail 12) -join "`n" } catch {}
+        [System.Windows.Forms.MessageBox]::Show(
+            "Setup failed: $($_.Exception.Message)`n`n--- last log lines ---`n$tail`n`nFull log: $log",
+            "PixelForge Setup", "OK", "Warning") | Out-Null
         $btnBack.Enabled = $true
         $btnCancel.Enabled = $true
         Show-Page 1
