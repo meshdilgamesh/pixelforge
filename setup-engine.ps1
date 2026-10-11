@@ -129,7 +129,7 @@ $rbComplete.Location = New-Object System.Drawing.Point(14, 10)
 $rbComplete.Size = New-Object System.Drawing.Size(480, 24)
 $rbComplete.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
 $cardComplete.Controls.Add($rbComplete)
-$cardComplete.Controls.Add((New-Label "Installs everything: app, AI models, Start Menu icon and auto-updates." 18  40  480  20  10  $false  $script:COL_DIM))
+$cardComplete.Controls.Add((New-Label "Installs everything: app, AI models, desktop + Start Menu icons and auto-updates." 18  40  480  20  10  $false  $script:COL_DIM))
 $cardComplete.Controls.Add((New-Label "Recommended for most users." 18  60  480  20  10  $false  $script:COL_DIM))
 
 # card 2: Custom
@@ -388,13 +388,26 @@ function Run-Install {
         & $uv pip install -p $venvPy spandrel pillow numpy fastapi "uvicorn[standard]" python-multipart 2>&1 | Out-File $log -Append -Encoding unicode
         if ($LASTEXITCODE -ne 0) { throw "Installing app dependencies failed. Check your internet connection and retry." }
 
+        Set-Status "Creating app icon..." 92
+        try {
+            & $venvPy -c "from PIL import Image, ImageDraw; img = Image.new('RGBA', (128, 128), (14, 17, 28, 255)); dr = ImageDraw.Draw(img); dr.rounded_rectangle([10, 10, 62, 62], radius=10, fill=(139, 92, 246, 255)); dr.rounded_rectangle([66, 66, 118, 118], radius=10, fill=(34, 211, 238, 255)); dr.rectangle([60, 60, 68, 68], fill=(244, 114, 182, 255)); img.save(r'$dest\icon.png')" 2>$null
+        } catch {}
+
         if ($rbComplete.Checked) {
-            Set-Status "Creating Start Menu shortcut..." 95
-            $lnk = (New-Object -ComObject WScript.Shell).CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\PixelForge.lnk")
+            Set-Status "Creating desktop and Start Menu shortcuts..." 95
+            $shell = New-Object -ComObject WScript.Shell
+            $lnk = $shell.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\PixelForge.lnk")
             $lnk.TargetPath = Join-Path $dest "start.bat"
             $lnk.WorkingDirectory = $dest
+            if (Test-Path (Join-Path $dest "icon.png")) { $lnk.IconLocation = Join-Path $dest "icon.png" }
             $lnk.Save()
-            $doneMsg.Text = "Find PixelForge in your Start Menu, or run start.bat in:`n$dest"
+            $desktop = [Environment]::GetFolderPath("Desktop")
+            $lnk2 = $shell.CreateShortcut("$desktop\PixelForge.lnk")
+            $lnk2.TargetPath = Join-Path $dest "start.bat"
+            $lnk2.WorkingDirectory = $dest
+            if (Test-Path (Join-Path $dest "icon.png")) { $lnk2.IconLocation = Join-Path $dest "icon.png" }
+            $lnk2.Save()
+            $doneMsg.Text = "Find PixelForge on your Desktop and in your Start Menu.`nFiles live in: $dest"
         } else {
             $doneMsg.Text = "Portable install. Run start.bat in:`n$dest"
         }
